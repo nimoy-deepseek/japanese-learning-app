@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#e8552f" />
+  <!-- 移动端：作为独立 App 运行（去掉浏览器地址栏） -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="日学" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>日本語学習 · 日学</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+  // 全局错误自检：任何 JS 报错都会在页面顶部弹红字，方便定位"点不动"的原因
+  window.__errbar = function (msg) {
+    var b = document.getElementById("errbar");
+    if (!b) {
+      b = document.createElement("div"); b.id = "errbar";
+      b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0392b;color:#fff;padding:8px 12px;font-size:12.5px;text-align:center;font-weight:700;";
+      (document.body || document.documentElement).appendChild(b);
+    }
+    b.textContent = "⚠ 页面错误：" + msg;
+  };
+  window.addEventListener("error", function (e) {
+    window.__errbar((e.message || (e.error && e.error.message) || "未知") + " @ " + (e.filename || "") + ":" + (e.lineno || ""));
+  });
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部栏 -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="logo-mark">日</span>
+        <div class="brand-text">
+          <h1>日学</h1>
+          <p class="brand-sub">にちがく · 每天进步一点点</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="chip chip-streak" id="streakChip" title="连续打卡">
+          <span class="flame">🔥</span><span id="streakNum">0</span>天
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="设置">⚙️</button>
+      </div>
+    </header>
+
+    <!-- 页面容器 -->
+    <main class="pages">
+      <!-- 今日学习 -->
+      <section class="page active" id="page-today">
+        <div class="hero">
+          <div class="hero-date" id="todayDate"></div>
+          <button class="btn btn-checkin" id="todayCheckinBtn">✅ 今日打卡</button>
+        </div>
+
+        <div class="section" id="section-words">
+          <div class="section-head">
+            <h2><span class="s-ico">🈁</span> 单词</h2>
+            <span class="progress-tag" id="wordsProgress">0/50</span>
+          </div>
+          <div class="bar"><div class="bar-fill" id="wordsBar"></div></div>
+          <div class="flashcard" id="flashcard"></div>
+          <div class="fc-actions">
+            <button class="fc-btn fc-no" id="fcNo">😐 还不熟</button>
+            <button class="fc-btn fc-yes" id="fcYes">😄 认识了</button>
+          </div>
+          <button class="btn btn-ghost hidden" id="wordsDoneBtn">单词已全部学完 ✓</button>
+        </div>
+
+        <div class="section" id="section-grammar">
+          <div class="section-head">
+            <h2><span class="s-ico">📖</span> 语法</h2>
+            <span class="progress-tag" id="grammarProgress">0/10</span>
+          </div>
+          <div class="bar"><div class="bar-fill" id="grammarBar"></div></div>
+          <div id="grammarList" class="g-list"></div>
+        </div>
+
+        <div class="section" id="section-dialogue">
+          <div class="section-head">
+            <h2><span class="s-ico">💬</span> 对话</h2>
+            <span class="progress-tag" id="dialogueProgress">0/10</span>
+          </div>
+          <div class="bar"><div class="bar-fill" id="dialogueBar"></div></div>
+          <div id="dialogueList" class="d-list"></div>
+        </div>
+      </section>
+
+      <!-- 打卡页 -->
+      <section class="page" id="page-checkin">
+        <div class="checkin-hero">
+          <div class="big-flame" id="bigFlame">🔥</div>
+          <div class="streak-line">已连续打卡 <b id="streakBig">0</b> 天</div>
+          <p class="muted">累计打卡 <span id="totalCheckins">0</span> 天 · 加油，别断签！</p>
+          <button class="btn btn-checkin btn-big" id="mainCheckinBtn">✅ 立即打卡</button>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">🗓️</span> 打卡日历</h2></div>
+          <div class="cal-head">
+            <button class="icon-btn" id="calPrev">‹</button>
+            <span id="calTitle"></span>
+            <button class="icon-btn" id="calNext">›</button>
+          </div>
+          <div class="cal-grid cal-week">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">🏆</span> 成就徽章</h2></div>
+          <div class="badges" id="badges"></div>
+        </div>
+      </section>
+
+      <!-- 阅读页 -->
+      <section class="page" id="page-reading">
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">📚</span> 日语阅读</h2></div>
+          <div class="reading-list" id="readingList"></div>
+        </div>
+        <div class="reader hidden" id="reader">
+          <button class="icon-btn back-btn" id="readerBack">← 返回</button>
+          <div id="readerContent"></div>
+        </div>
+      </section>
+
+      <!-- 我的 / 设置页 -->
+      <section class="page" id="page-profile">
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">📊</span> 学习统计</h2></div>
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-n" id="statStreak">0</div><div class="stat-l">连续打卡</div></div>
+            <div class="stat"><div class="stat-n" id="statWords">0</div><div class="stat-l">累计单词</div></div>
+            <div class="stat"><div class="stat-n" id="statGrammar">0</div><div class="stat-l">累计语法</div></div>
+            <div class="stat"><div class="stat-n" id="statDialogue">0</div><div class="stat-l">累计对话</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">🎚️</span> 学习计划</h2></div>
+          <div class="setting-row">
+            <label>每日单词量</label>
+            <select id="setWords">
+              <option value="50">50 个</option>
+              <option value="75">75 个</option>
+              <option value="100">100 个</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>每日语法量</label>
+            <select id="setGrammar">
+              <option value="10">10 个</option>
+              <option value="15">15 个</option>
+              <option value="20">20 个</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>每日对话量</label>
+            <select id="setDialogues">
+              <option value="10">10 篇</option>
+              <option value="15">15 篇</option>
+              <option value="20">20 篇</option>
+            </select>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">🔊</span> 语音</h2></div>
+          <div id="ttsNotice" class="tts-notice"></div>
+          <div class="setting-row">
+            <label>发音人（日语）</label>
+            <select id="setVoice"></select>
+          </div>
+          <div class="setting-row">
+            <label>朗读语速</label>
+            <select id="setRate">
+              <option value="0.8">慢速 (0.8×)</option>
+              <option value="1" selected>正常 (1×)</option>
+              <option value="1.15">稍快 (1.15×)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>单词自动朗读</label>
+            <input type="checkbox" id="setAutoSpeak" />
+          </div>
+          <div class="setting-row">
+            <label>显示注音（假名标注在字上方）</label>
+            <input type="checkbox" id="setFurigana" checked />
+          </div>
+          <div class="setting-row">
+            <label>点击此处测试发音</label>
+            <button class="btn btn-ghost" id="testSpeak">🔊 こんにちは</button>
+          </div>
+          <div class="setting-row">
+            <label>手机能否连上外网</label>
+            <button class="btn btn-ghost" id="netCheck">🔌 检测网络</button>
+          </div>
+          <p id="speakStatus" class="muted small" style="margin-top:6px"></p>
+          <audio id="miniPlayer" controls preload="none" style="width:100%;margin-top:8px"></audio>
+          <p class="muted small" style="margin-top:10px">说明：本机没有日语发音人时，会<b>自动改用网络日语朗读</b>（需联网）。微信 / QQ 内置浏览器无法使用内置语音，建议用系统浏览器打开。注音来自在线日文词典（首次联网加载数秒，之后离线可用）。</p>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">📲</span> 手机 / 安装</h2></div>
+          <button class="btn btn-ghost" id="installBtn">📲 安装到主屏幕（当 App 用）</button>
+          <p class="muted small" style="margin-top:10px">手机请用浏览器菜单「添加到主屏幕」；若出现「安装」图标也点它，即可全屏离线当 App 用（iPhone 用 Safari 分享 → 添加到主屏幕）。</p>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2><span class="s-ico">💾</span> 数据</h2></div>
+          <button class="btn btn-danger" id="resetBtn">清除全部学习数据</button>
+          <p class="muted small">数据仅保存在本机浏览器中，清除后无法恢复。</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- 底部导航 -->
+    <nav class="tabbar">
+      <button class="tab active" data-tab="today"><span>📋</span>今日</button>
+      <button class="tab" data-tab="checkin"><span>🔥</span>打卡</button>
+      <button class="tab" data-tab="reading"><span>📚</span>阅读</button>
+      <button class="tab" data-tab="profile"><span>👤</span>我的</button>
+    </nav>
+  </div>
+
+  <button id="manualAudio" class="manual-audio hidden" type="button">▶️ 点这里播放语音</button>
+  <div id="toast" class="toast"></div>
+
+  <!-- PWA 注册 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
+  <!-- 注音引擎（日文词典 → ふりがな）在线加载，失败时自动回退为原文 -->
+  <script src="https://cdn.jsdelivr.net/npm/kuroshiro@1.2.0/dist/kuroshiro.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kuroshiro-analyzer-kuromoji@1.1.0/dist/kuroshiro-analyzer-kuromoji.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
